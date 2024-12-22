@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Billing - PharmaBill</title>
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <!-- Header -->
+    <header class="bg-primary text-white py-3">
+        <div class="container d-flex justify-content-between align-items-center">
+            <h1 class="m-0">PharmaBill</h1>
+            <nav>
+                <ul class="nav">
+                    <li class="nav-item"><a href="index.html" class="nav-link text-white">Home</a></li>
+                    <li class="nav-item"><a href="billing.html" class="nav-link text-white">Billing</a></li>
+                    <li class="nav-item"><a href="inventory.html" class="nav-link text-white">Inventory</a></li>
+                    <li class="nav-item"><a href="reports.html" class="nav-link text-white">Reports</a></li>
+                    <li class="nav-item"><a href="settings.html" class="nav-link text-white">Settings</a></li>
+                    <li class="nav-item"><a href="#logout" class="nav-link text-white">Logout</a></li>
+                </ul>
+            </nav>
+        </div>
+    </header>
+
+    <!-- Billing Section -->
+    <section class="container my-5">
+        <h2 class="text-center">Generate Bills</h2>
+        <form class="row g-3">
+            <!-- Customer Details -->
+            <div class="col-md-6">
+                <label for="customerName" class="form-label">Customer Name</label>
+                <input type="text" class="form-control" id="customerName" placeholder="Enter customer name">
+            </div>
+            <div class="col-md-6">
+                <label for="phoneNumber" class="form-label">Phone Number</label>
+                <input type="text" class="form-control" id="phoneNumber" placeholder="Enter phone number">
+            </div>
+
+            <!-- Product Details Table -->
+            <div class="col-md-12">
+                <label class="form-label">Product Details</label>
+                <table class="table table-bordered">
+                    <thead>
+                        <tr>
+                            <th>Product Name</th>
+                            <th>Price</th>
+                            <th>Quantity</th>
+                            <th>Action</th>
+                        </tr>
+                    </thead>
+                    <tbody id="productTable"></tbody>
+                </table>
+                <button type="button" class="btn btn-success" onclick="addProductRow()">Add Product</button>
+            </div>
+
+            <!-- Total Amount -->
+            <div class="col-md-6">
+                <label for="amount" class="form-label">Total Amount</label>
+                <input type="number" class="form-control" id="amount" placeholder="Auto-calculated" readonly>
+            </div>
+
+            <!-- Submit Button -->
+            <div class="col-md-6 d-flex align-items-end">
+                <button type="button" class="btn btn-primary w-100" onclick="generateBill()">Generate Bill</button>
+            </div>
+        </form>
+    </section>
+
+    <!-- Footer -->
+    <footer class="bg-primary text-white text-center py-3">
+        <p class="m-0">&copy; 2024 PharmaBill | All Rights Reserved.</p>
+    </footer>
+
+    <!-- Bootstrap JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+    <script>
+        // Add a new product row
+        function addProductRow() {
+            const table = document.getElementById("productTable");
+            const row = document.createElement("tr");
+            row.innerHTML = `
+                <td><input type="text" class="form-control product-name" placeholder="Name"></td>
+                <td><input type="number" class="form-control product-price" placeholder="Price"></td>
+                <td><input type="number" class="form-control product-quantity" placeholder="Quantity"></td>
+                <td><button class="btn btn-danger" onclick="removeRow(this)">Remove</button></td>
+            `;
+            table.appendChild(row);
+        }
+
+        // Remove a product row
+        function removeRow(button) {
+            button.closest("tr").remove();
+            calculateTotal();
+        }
+
+        // Calculate total amount
+        function calculateTotal() {
+            const rows = document.querySelectorAll("#productTable tr");
+            let total = 0;
+            rows.forEach(row => {
+                const price = parseFloat(row.querySelector(".product-price").value) || 0;
+                const quantity = parseInt(row.querySelector(".product-quantity").value) || 0;
+                total += price * quantity;
+            });
+            document.getElementById("amount").value = total.toFixed(2);
+        }
+
+        // Generate Bill
+        async function generateBill(event) {
+    console.log("Generate Bill function called");
+
+}
+
+        async function generateBill() {
+            const customer = document.getElementById("customerName").value;
+            const phone = document.getElementById("phoneNumber").value;
+            const rows = document.querySelectorAll("#productTable tr");
+            const items = Array.from(rows).map(row => {
+                const name = row.querySelector(".product-name").value;
+                const price = parseFloat(row.querySelector(".product-price").value);
+                const quantity = parseInt(row.querySelector(".product-quantity").value);
+                return {
+                    name,
+                    pricePerUnit: price,
+                    quantity,
+                    totalAmount: price * quantity,
+                };
+            });
+
+            // Validate inputs
+            if (!customer || !phone || items.length === 0) {
+                alert("Please fill out all fields correctly!");
+                return;
+            }
+
+            const totalAmount = parseFloat(document.getElementById("amount").value) || 0;
+
+            // Generate a unique invoice number as a number
+            const invoiceNumber = Date.now(); // Using only timestamp as a numeric value
+
+            try {
+                const response = await axios.post('http://localhost:3000/api/bills/create', {
+                    invoiceNumber, // Numeric invoice number
+                    customer,
+                    phone,
+                    items,
+                    totalAmount,
+                });
+
+                alert("Bill generated successfully!");
+                console.log("Response from backend:", response.data);
+                document.querySelector("form").reset();
+                document.getElementById("productTable").innerHTML = "";
+            } catch (error) {
+                console.error("Error generating bill:", error.response ? error.response.data : error.message);
+                alert("Failed to generate bill. Please try again.");
+            }
+        }
+
+        // Event listeners for real-time total calculation
+        document.getElementById("productTable").addEventListener("input", calculateTotal);
+    </script>
+</body>
+</html>
